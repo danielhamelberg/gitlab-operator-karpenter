@@ -36,7 +36,7 @@ runners:
           "gitlab-runner" = "NoSchedule" # But we tolerate the taint set by provisioner. Other pods do not.
 podLabels:
   purpose: gitlab-runner
-Actually, the whole work we’ve done was just a preparation in order to be able to add nodeSelector and taint (*) to deployment definition.
+# Actually, the whole work we’ve done was just a preparation in order to be able to add nodeSelector and taint (*) to deployment definition.
 [runners.kubernetes.node_selector]
   “node.kubernetes.io/instance-type” = “c5a.2xlarge”
   "purpose" = "gitlab-runner"                                                                                                                                                                                                                                                                                                                                      
