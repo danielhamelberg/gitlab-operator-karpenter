@@ -1,0 +1,45 @@
+gitlabUrl: https://<GITLAB_URL>/
+runnerRegistrationToken: <TOKEN>
+revisionHistoryLimit: 5 # How many old ReplicaSets for this Deployment you want to retain
+concurrent: 10 # Configure the maximum number of concurrent jobs
+metrics: # Configure integrated Prometheus metrics exporter
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus-operator
+service:
+  enabled: true
+rbac: # The runner needs permission to be able to create pods with executors
+  create: true
+  serviceAccountName: gitlab
+  rules:
+    - resources: [“configmaps”, “pods”, “pods/attach”, “secrets”, “services”]
+      verbs: [“get”, “list”, “watch”, “create”, “patch”, “delete”, “update”]
+    - apiGroups: [“”]
+      resources: [“pods/exec”]
+      verbs: [“create”, “patch”, “delete”]
+runners:
+  tags: “k8s” # Specify the tags associated with the runner.
+  runUntagged: false # Specify if jobs without tags should be run
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = “{{.Release.Namespace}}”
+        image = “ubuntu:16.04”
+        poll_timeout = 720 # Increased timeout to give karpenter time to spin up the new worker. Otherwise pipeline fails
+        [runners.kubernetes.node_selector]
+          “node.kubernetes.io/instance-type” = “c5a.2xlarge” # The trigger for karpenter, that for executors we need dedicated worker.
+          "purpose" = "gitlab-runner"                                                                                                                                                                                                                                                                                                                                      
+          "karpenter.sh/provisioner-name" = "gitlab-runner" # The provisioner taints the worker                                                                                                                                                                                                                                                                                                                
+        [runners.kubernetes.node_tolerations]                                                                                                                                                                                                                                                                                                                              
+          "gitlab-runner" = "NoSchedule" # But we tolerate the taint set by provisioner. Other pods do not.
+podLabels:
+  purpose: gitlab-runner
+Actually, the whole work we’ve done was just a preparation in order to be able to add nodeSelector and taint (*) to deployment definition.
+[runners.kubernetes.node_selector]
+  “node.kubernetes.io/instance-type” = “c5a.2xlarge”
+  "purpose" = "gitlab-runner"                                                                                                                                                                                                                                                                                                                                      
+  "karpenter.sh/provisioner-name" = "gitlab-runner"                                                                                                                                                                                                                                                                                                                
+[runners.kubernetes.node_tolerations]                                                                                                                                                                                                                                                                                                                              
+   "gitlab-runner" = "NoSchedule" # Taint is required in order to ensure that after runner done its work, the worker node will be killed. If a new pod scheduled while executor is running, karpenter will not shut down the worker node.
