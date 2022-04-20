@@ -1,0 +1,40 @@
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: gitlab-runner
+spec:
+  labels:
+    purpose: gitlab-runner
+  limits:
+    resources:
+      cpu: 10k
+  provider:
+    amiFamily: AL2
+    apiVersion: extensions.karpenter.sh/v1alpha1
+    kind: AWS
+    securityGroupSelector:
+      Name: <SG_NAME>
+    subnetSelector:
+      karpenter.sh/discovery: <LABEL_NAME>
+  requirements:
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values:
+        - on-demand
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values:
+        - c5a.4xlarge
+        - c5a.2xlarge
+        - c5a.xlarge
+        - c5a.large
+        - t3a.2xlarge
+        - t3a.xlarge
+    - key: kubernetes.io/arch
+      operator: In
+      values:
+        - amd64
+  taints:
+    - effect: NoSchedule
+      key: gitlab-runner
+  ttlSecondsAfterEmpty: 30
